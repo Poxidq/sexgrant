@@ -16,6 +16,13 @@
       - setools-console
     state: present
 
+- name: Install SELinux management tools
+  dnf:
+    name:
+      - udica
+      - podman
+    state: present
+
 - name: Create demo web directory
   file:
     path: /var/selinux_demo
@@ -37,13 +44,37 @@
     - { name: 'httpd_execmem', state: 'off' }
     - { name: 'container_manage_cgroup', state: 'off' }
 
+- name: Create container JSON definition
+  copy:
+    dest: /tmp/container.json
+    content: |
+      {
+        "selinuxtype": "container_runtime_t",
+        "process": {
+          "name": "nginx",
+          "selinuxcontext": "system_u:system_r:container_t:s0"
+        },
+        "mounts": [
+          {
+            "source": "/var/www",
+            "target": "/var/www",
+            "type": "bind",
+            "selinuxcontext": "system_u:object_r:httpd_sys_content_t:s0"
+          }
+        ],
+        "ports": [
+          {
+            "port": 80,
+            "protocol": "tcp"
+          }
+        ]
+      }
+    mode: '0644'
+
 - name: Create custom container policy
-  command: "udica -j {{ container_info }} custom_container"
-  args:
-    creates: /tmp/custom_container.pp
-  vars:
-    container_info: /tmp/container.json
-  register: udica_out
+  command: udica -j /tmp/container.json custom_container
+  register: udica_result
+  failed_when: udica_result.rc != 0 and 'already exists' not in udica_result.stderr
 
 - name: Load custom SELinux policy
   command: semodule -i /tmp/custom_container.pp

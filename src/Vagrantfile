@@ -5,28 +5,36 @@ Vagrant.configure("2") do |config|
   config.vm.box = "generic/centos9s"
   config.vm.box_version = "4.2.16"
   
+  # Use static IP for Ansible
+  config.vm.network "private_network", ip: "192.168.56.10"
   config.vm.network "forwarded_port", guest: 80, host: 8080
   
   config.vm.provider "vmware_desktop" do |vmware|
-    vmware.gui = true  # Optional: Enable VM GUI
+    vmware.gui = false
     vmware.memory = 2048
     vmware.cpus = 2
-    vmware.enable_vmrun_ip_lookup = false  # Fix IP detection if needed
+    vmware.enable_vmrun_ip_lookup = true
   end
 
-  # Enable SELinux in enforcing mode (default for CentOS)
-  # If SELinux is disabled in the box, add a shell provisioner:
+  # Enable SELinux in enforcing mode
   config.vm.provision "shell", inline: <<-SHELL
     sudo sed -i 's/SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
     sudo setenforce 1
   SHELL
 
-  # Ansible provisioning
+  # config.trigger.after :up do |trigger|
+  #   trigger.name = "Generate Ansible inventory"
+  #   trigger.run = {inline: "bash generate_inventory.sh"}
+  # end
+
+  # Updated Ansible provisioner
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "ansible/playbook.yml"
+    ansible.inventory_path = "ansible/inventory.ini"
     ansible.become = true
-    ansible.compatibility_mode = "2.0"
     ansible.verbose = "v"
+    ansible.compatibility_mode = "2.0"
+    ansible.raw_ssh_args = ["-o StrictHostKeyChecking=no"]
     ansible.extra_vars = {
       ansible_python_interpreter: "/usr/bin/python3"
     }
