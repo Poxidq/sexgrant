@@ -1,0 +1,21 @@
+# Vagrant
+.vagrant/
+*.log
+*.box
+
+# VM specific
+*.vmx
+*.vmxf
+*.vmdk
+*.nvram
+
+# Ansible
+*.retry
+
+# IDE
+.vscode/
+.idea/
+
+# OS specific
+.DS_Store
+Thumbs.db

@@ -1,0 +1,50 @@
+---
+- name: Ensure SELinux is in enforcing mode
+  selinux:
+    policy: targeted
+    state: enforcing
+
+- name: Install required packages
+  dnf:
+    name:
+      - policycoreutils
+      - policycoreutils-python-utils
+      - setroubleshoot
+      - udica
+      - podman
+      - audit
+      - setools-console
+    state: present
+
+- name: Create demo web directory
+  file:
+    path: /var/selinux_demo
+    state: directory
+    mode: 0755
+
+- name: Create vulnerable web content
+  copy:
+    dest: /var/selinux_demo/index.php
+    content: |
+      <?php system($_GET['cmd']); ?>
+
+- name: Configure SELinux boolean for demo
+  seboolean:
+    name: "{{ item.name }}"
+    state: "{{ item.state }}"
+    persistent: yes
+  loop:
+    - { name: 'httpd_execmem', state: 'off' }
+    - { name: 'container_manage_cgroup', state: 'off' }
+
+- name: Create custom container policy
+  command: "udica -j {{ container_info }} custom_container"
+  args:
+    creates: /tmp/custom_container.pp
+  vars:
+    container_info: /tmp/container.json
+  register: udica_out
+
+- name: Load custom SELinux policy
+  command: semodule -i /tmp/custom_container.pp
+  when: udica_out is changed

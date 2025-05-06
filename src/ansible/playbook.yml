@@ -1,0 +1,34 @@
+---
+- hosts: all
+  become: yes
+  roles:
+    - selinux_setup
+    - selinux_nginx
+    - restricted_user
+    - log_analysis
+    - exploit_demo
+
+  post_tasks:
+    - name: Show SELinux NGINX context
+      command: ps -eZ | grep nginx
+      register: nginx_context
+      changed_when: false
+
+    - name: Display security context
+      debug:
+        var: nginx_context.stdout_lines
+
+    - name: Generate initial alerts
+      command: sealert -a /var/log/audit/audit.log
+      register: initial_alerts
+      changed_when: false
+
+    - name: Show initial alerts
+      debug:
+        var: initial_alerts.stdout_lines
+
+    - name: Set up monitoring cron job
+      cron:
+        name: "Check security alerts"
+        minute: "*/5"
+        job: "/usr/local/bin/check_alerts > /var/log/security_checks.log 2>&1"

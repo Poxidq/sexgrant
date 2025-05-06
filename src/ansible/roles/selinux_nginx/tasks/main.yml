@@ -1,0 +1,72 @@
+---
+- name: Install required packages
+  dnf:
+    name:
+      - nginx
+      - php-fpm
+      - php-cli
+      - policycoreutils-python-utils
+      - setroubleshoot
+    state: present
+
+- name: Create web root directory
+  file:
+    path: /var/www/vuln_app
+    state: directory
+    mode: 0755
+    owner: nginx
+    group: nginx
+
+- name: Create vulnerable PHP file
+  copy:
+    dest: /var/www/vuln_app/index.php
+    content: |
+      <?php 
+      if(isset($_GET['cmd'])) {
+          $output = shell_exec($_GET['cmd']);
+          echo "<pre>$output</pre>";
+      } else {
+          echo "<h1>Vulnerable Application</h1>";
+          echo "Try: ?cmd=id";
+      }
+      ?>
+    owner: nginx
+    group: nginx
+    mode: 0644
+
+- name: Configure NGINX
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: restart nginx
+
+- name: Configure PHP-FPM
+  template:
+    src: php.conf.j2
+    dest: /etc/php-fpm.d/www.conf
+  notify: restart php-fpm
+
+- name: Set SELinux context for web files
+  sefcontext:
+    target: '/var/www/vuln_app(/.*)?'
+    setype: httpd_sys_content_t
+    state: present
+
+- name: Apply SELinux context
+  command: restorecon -Rv /var/www/vuln_app
+
+- name: Allow HTTP ports
+  firewalld:
+    service: http
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Enable and start services
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - nginx
+    - php-fpm

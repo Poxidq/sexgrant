@@ -1,0 +1,16 @@
+[www]
+user = nginx
+group = nginx
+listen = /run/php-fpm/www.sock
+listen.owner = nginx
+listen.group = nginx
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+
+; Security hardening
+php_admin_value[disable_functions] = exec,passthru,shell_exec,system
+php_admin_flag[allow_url_fopen] = off
+php_admin_flag[allow_url_include] = off

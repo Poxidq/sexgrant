@@ -1,0 +1,56 @@
+---
+- name: Create restricted user
+  user:
+    name: hacker
+    password: "{{ 'password' | password_hash('sha512') }}"
+    groups: users
+
+- name: Install vulnerable SUID binary
+  copy:
+    src: privilege_escalation.c
+    dest: /tmp/privilege_escalation.c
+  register: c_src
+
+- name: Compile vulnerable program
+  command: gcc /tmp/privilege_escalation.c -o /usr/local/bin/suid_demo
+  when: c_src.changed
+
+- name: Set SUID bit
+  file:
+    path: /usr/local/bin/suid_demo
+    mode: "4755"
+    owner: root
+
+- name: Configure auditd rules
+  copy:
+    content: |
+      -a always,exit -F arch=b64 -S execve -F euid=0 -k privilege_escalation
+      -w /usr/local/bin/suid_demo -p wa -k suid_modification
+    dest: /etc/audit/rules.d/privesc.rules
+
+- name: Install monitoring tools
+  dnf:
+    name:
+      - audit
+      - tripwire
+    state: present
+
+- name: Start and enable auditd
+  service:
+    name: auditd
+    state: started
+    enabled: yes
+
+- name: Deploy alert check script
+  copy:
+    src: alert_check.sh
+    dest: /usr/local/bin/check_alerts
+    mode: 0755
+
+- name: Create flag file
+  copy:
+    content: "SELinux_CTF_Flag{pr1v1l3ge_3sc4l4t10n_d3t3ct3d}"
+    dest: /root/flag.txt
+    mode: 0600
+    owner: root
+    group: root
