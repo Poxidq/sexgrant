@@ -16,6 +16,21 @@
       - setools-console
     state: present
 
+- name: Install additional security packages
+  dnf:
+    name:
+      - policycoreutils
+      - policycoreutils-python-utils
+      - setroubleshoot
+      - setroubleshoot-server
+      - audit
+      - auditd
+      - fail2ban
+      - fail2ban-firewalld
+      - openssh-server
+      - aide
+    state: present
+
 - name: Install SELinux management tools
   dnf:
     name:
@@ -72,10 +87,50 @@
     mode: '0644'
 
 - name: Create custom container policy
-  command: udica -j /tmp/container.json custom_container
-  register: udica_result
-  failed_when: udica_result.rc != 0 and 'already exists' not in udica_result.stderr
+  copy:
+    dest: /etc/selinux/container.te
+    content: |
+      module container 1.0;
+      
+      require {
+          type container_t;
+          type container_file_t;
+          class file { read write execute };
+          class process { transition signal };
+      }
+      
+      # Allow container processes to execute files
+      allow container_t container_file_t:file { read execute };
+      
+      # Prevent container escape
+      dontaudit container_t self:process { transition signal };
+      
+      # Restrict network access
+      allow container_t self:netif { ingress egress };
+  notify: reload selinux policy
 
-- name: Load custom SELinux policy
-  command: semodule -i /tmp/custom_container.pp
-  when: udica_out is changed
+- name: Create custom SELinux policy for monitoring
+  copy:
+    dest: /etc/audit/rules.d/security.rules
+    content: |
+      # Monitor file access attempts
+      -a always,exit -F arch=b64 -S open,creat,truncate,ftruncate -F auid>=1000 -F auid!=unset -k file_access
+      
+      # Monitor command execution
+      -a always,exit -F arch=b64 -S execve -F auid>=1000 -F auid!=unset -k command_execution
+      
+      # Monitor privilege escalation
+      -a always,exit -F arch=b64 -S setuid,setgid -F auid>=1000 -F auid!=unset -k privilege_escalation
+      
+      # Monitor SSH related events
+      -w /etc/ssh/sshd_config -p wa -k sshd_config
+      -w /var/log/secure -p wa -k ssh_login
+
+- name: Start and enable security services
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - auditd
+    - fail2ban

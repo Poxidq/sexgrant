@@ -70,3 +70,21 @@
   loop:
     - nginx
     - php-fpm
+
+- name: Configure additional SELinux contexts
+  sefcontext:
+    target: '/var/www/vuln_app/uploads(/.*)?'
+    setype: httpd_sys_rw_content_t
+    state: present
+
+- name: Set up PHP-FPM chroot
+  template:
+    src: php-fpm-chroot.conf.j2
+    dest: /etc/php-fpm.d/chroot.conf
+  notify: restart php-fpm
+
+- name: Configure additional security headers
+  lineinfile:
+    path: /etc/nginx/nginx.conf
+    line: 'add_header X-Content-Type-Options "nosniff";'
+    insertafter: 'server_name localhost;'

@@ -4,28 +4,40 @@
     name:
       - python3-policycoreutils
       - setroubleshoot-server
-      - auditorium
+      - audit-libs
+      - python3-audit
+      - python3-libselinux
     state: present
 
-- name: Create log analysis script
+- name: Create enhanced log analysis script
   copy:
     dest: /usr/local/bin/analyze_security_events.sh
     content: |
       #!/bin/bash
       echo "=== Security Event Analysis ==="
       echo "Timestamp: $(date)"
+      
       echo -e "\n1. SELinux Denials Timeline:"
       ausearch -m AVC -ts recent | audit2allow -w
-
+      
       echo -e "\n2. Privilege Escalation Attempts:"
       ausearch -k privilege_escalation -ts recent | aureport --interpret
-
+      
       echo -e "\n3. Web Application Exploits:"
       ausearch -k web_exploit -ts recent | aureport --interpret
-
+      
       echo -e "\n4. SELinux Alert Summary:"
       sealert -a /var/log/audit/audit.log
-
+      
       echo -e "\n5. File Access Violations:"
       ausearch -m AVC -ts recent | grep -i "access denied" | audit2why
+      
+      echo -e "\n6. Process Domain Transitions:"
+      ps -eZ | grep -E 'nginx|httpd|php-fpm'
+      
+      echo -e "\n7. Network Connection Attempts:"
+      ausearch -k network_access -ts recent | aureport --interpret
+      
+      echo -e "\n8. System Call Violations:"
+      ausearch -m SYSCALL -ts recent | audit2why
     mode: 0755

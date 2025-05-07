@@ -1,0 +1,8 @@
+---
+- name: restart auditd
+  service:
+    name: auditd
+    state: restarted
+
+- name: reload auditd rules
+  command: auditctl -R /etc/audit/rules.d/privesc.rules

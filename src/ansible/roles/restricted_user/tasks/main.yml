@@ -1,9 +1,25 @@
 ---
+- name: Install required packages
+  dnf:
+    name:
+      - python3-pip
+      - python3-passlib
+      - gcc
+    state: present
+
+- name: Install passlib via pip
+  pip:
+    name: passlib
+    state: present
+
 - name: Create restricted user
   user:
     name: hacker
-    password: "{{ 'password' | password_hash('sha512') }}"
+    # Pre-hashed password: 'password'
+    password: "$6$mysecretsalt$qg5JGNZOWPdSdI7px1TFaD0KVGcH8R1cX0.jJxf.wOW4wPTZAeYhhS10MhO5BwZOHObEGXHy4SM8p79sZIJ0Z/"
     groups: users
+    state: present
+    create_home: yes
 
 - name: Install vulnerable SUID binary
   copy:
@@ -54,3 +70,21 @@
     mode: 0600
     owner: root
     group: root
+
+- name: Configure enhanced audit rules
+  copy:
+    content: |
+      # Monitor SUID binaries
+      -w /usr/local/bin/suid_demo -p wa -k suid_modification
+      
+      # Monitor privilege changes
+      -a always,exit -F arch=b64 -S setuid,setgid,setreuid,setregid -k privilege_change
+      
+      # Monitor file access in sensitive directories
+      -w /etc/passwd -p wa -k passwd_changes
+      -w /etc/shadow -p wa -k shadow_changes
+      
+      # Monitor kernel module loading
+      -w /sbin/insmod -p x -k module_load
+    dest: /etc/audit/rules.d/enhanced.rules
+  notify: reload auditd rules

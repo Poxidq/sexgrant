@@ -1,6 +1,22 @@
----
-- hosts: all
+- name: Configure SELinux Lab Environment
+  hosts: default
   become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Show detected IP
+      debug:
+        msg: "VM IP: {{ ansible_host }}"
+        
+    - name: Install SELinux utilities
+      dnf:
+        name:
+          - policycoreutils-python-utils
+          - selinux-policy-targeted
+          - setroubleshoot
+          - audit
+        state: present
+
   roles:
     - selinux_setup
     - selinux_nginx
@@ -9,26 +25,26 @@
     - exploit_demo
 
   post_tasks:
-    - name: Show SELinux NGINX context
-      command: ps -eZ | grep nginx
-      register: nginx_context
+    - name: Verify service contexts
+      shell: "ps -eZ | grep -E 'nginx|httpd' || true"
+      register: service_contexts
       changed_when: false
 
-    - name: Display security context
+    - name: Display security contexts
       debug:
-        var: nginx_context.stdout_lines
+        var: service_contexts.stdout_lines
 
-    - name: Generate initial alerts
+    - name: Generate initial security report
       command: sealert -a /var/log/audit/audit.log
-      register: initial_alerts
+      register: security_report
       changed_when: false
 
-    - name: Show initial alerts
+    - name: Show security alerts
       debug:
-        var: initial_alerts.stdout_lines
+        var: security_report.stdout_lines
 
-    - name: Set up monitoring cron job
+    - name: Schedule log monitoring
       cron:
-        name: "Check security alerts"
+        name: "Security alert checks"
         minute: "*/5"
-        job: "/usr/local/bin/check_alerts > /var/log/security_checks.log 2>&1"
+        job: "/usr/local/bin/check_alerts > /var/log/security_audit.log 2>&1"
