@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName localhost
+    DocumentRoot /usr/share/squirrelmail
+
+    <Directory /usr/share/squirrelmail>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog /var/log/httpd/squirrelmail_error.log
+    CustomLog /var/log/httpd/squirrelmail_access.log combined
+</VirtualHost> 

@@ -1,0 +1,5 @@
+---
+- name: reload selinux policy
+  shell: |
+    semodule -n -B
+  become: true

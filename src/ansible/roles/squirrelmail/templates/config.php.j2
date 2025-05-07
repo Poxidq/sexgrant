@@ -1,0 +1,50 @@
+<?php
+// SquirrelMail Configuration File
+
+// Organization preferences
+$org_name = "SELinux Lab Mail";
+$org_logo = "../images/sm_logo.png";
+$org_title = "SELinux Lab Webmail";
+
+// Server settings
+$domain = "localhost";
+$imapServerAddress = "localhost";
+$imapPort = 143;
+$useSendmail = true;
+$smtpServerAddress = "localhost";
+$smtpPort = 25;
+
+// Security settings
+$use_secure_login = false;
+$force_username_lowercase = true;
+$default_charset = 'UTF-8';
+
+// Theme settings
+$default_theme = 0;
+$theme_css = '';
+
+// Language settings
+$squirrelmail_default_language = 'en_US';
+$default_charset = 'UTF-8';
+
+// Time settings
+$timezone = 'UTC';
+
+// Mail settings
+$data_dir = '/var/lib/squirrelmail/data/';
+$attachment_dir = '/var/lib/squirrelmail/attachments/';
+
+// Session settings
+$session_name = 'SQMSESSID';
+$session_expired_time = 30;
+
+// Debug settings
+$debug_mode = false;
+$debug_log = '/var/log/squirrelmail/debug.log';
+
+// Custom error messages for SELinux context
+$custom_error_messages = array(
+    'selinux_denied' => 'SELinux is preventing access to required resources. Check the audit log for details.',
+    'mail_connect' => 'Unable to connect to mail server. SELinux may be blocking the connection.'
+);
+?> 

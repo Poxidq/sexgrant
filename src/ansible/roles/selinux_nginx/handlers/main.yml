@@ -3,6 +3,25 @@
   service:
     name: nginx
     state: restarted
+  ignore_errors: true
+  register: nginx_restart_result
+
+- name: Check nginx status and output logs if restart failed
+  command: "systemctl status nginx.service"
+  when: nginx_restart_result is failed
+  register: nginx_status
+  ignore_errors: true
+
+- name: Output nginx logs if restart failed
+  command: "journalctl -xeu nginx.service"
+  when: nginx_restart_result is failed
+  register: nginx_logs
+  ignore_errors: true
+
+- name: Fail the playbook if nginx restart failed
+  fail:
+    msg: "Nginx failed to restart. Status: {{ nginx_status.stdout }}, Logs: {{ nginx_logs.stdout }}"
+  when: nginx_restart_result is failed
 
 - name: restart php-fpm
   service:

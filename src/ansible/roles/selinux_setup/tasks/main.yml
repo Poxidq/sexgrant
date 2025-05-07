@@ -24,7 +24,6 @@
       - setroubleshoot
       - setroubleshoot-server
       - audit
-      - auditd
       - fail2ban
       - fail2ban-firewalld
       - openssh-server
@@ -36,6 +35,7 @@
     name:
       - udica
       - podman
+      - selinux-policy-devel
     state: present
 
 - name: Create demo web directory
@@ -134,3 +134,5 @@
   loop:
     - auditd
     - fail2ban
+
+# Add this handlers section at the end

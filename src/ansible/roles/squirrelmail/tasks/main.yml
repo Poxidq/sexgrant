@@ -1,0 +1,97 @@
+---
+- name: Enable EPEL repository
+  dnf:
+    name: epel-release
+    state: present
+
+- name: Install required packages
+  dnf:
+    name:
+      - squirrelmail
+      - php
+      - php-common
+      - php-mbstring
+      - php-imap
+      - php-mysqlnd
+      - policycoreutils-python-utils
+      - setroubleshoot
+    enablerepo: "epel*"
+    state: present
+
+- name: Create web directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: apache
+    group: apache
+    mode: 0755
+  loop:
+    - /var/www/html/squirrelmail
+    - /etc/squirrelmail
+
+- name: Configure SquirrelMail
+  template:
+    src: config.php.j2
+    dest: /etc/squirrelmail/config.php
+    mode: 0644
+  notify: restart httpd
+
+- name: Configure Apache virtual host
+  template:
+    src: squirrelmail.conf.j2
+    dest: /etc/httpd/conf.d/squirrelmail.conf
+    mode: 0644
+  notify: restart httpd
+
+- name: Set up test email accounts
+  copy:
+    content: |
+      #!/bin/bash
+      # Create test users
+      existing_users=$(grep -c '^testuser' /etc/passwd)
+      [[ $existing_users -ge 2 ]] && exit 0
+      
+      for i in {1..2}; do
+          useradd -m -s /sbin/nologin testuser$i
+          echo "password123" | passwd --stdin testuser$i
+      done
+    dest: /usr/local/bin/setup_test_users.sh
+    mode: 0755
+
+- name: Execute user setup script
+  command: /usr/local/bin/setup_test_users.sh
+  changed_when: false
+
+- name: Configure SELinux for webmail
+  sefcontext:
+    target: '/var/www/html/squirrelmail(/.*)?'
+    setype: httpd_sys_rw_content_t
+    state: present
+
+- name: Apply SELinux context
+  command: restorecon -Riv /var/www/html/squirrelmail
+
+- name: Set up audit rules for SquirrelMail
+  copy:
+    content: |
+      # Monitor SquirrelMail access
+      -w /var/www/html/squirrelmail -p wa -k squirrelmail_access
+      -w /etc/squirrelmail -p wa -k squirrelmail_config
+      -a always,exit -F arch=b64 -S connect -F sport=110 -F sport=143 -F sport=25 -k mail_ports
+    dest: /etc/audit/rules.d/squirrelmail.rules
+  notify: reload auditd
+
+- name: Create troubleshooting guide
+  copy:
+    content: |
+      # SELinux Troubleshooting Steps
+      1. Check recent denials:
+         sudo ausearch -m AVC -ts recent | grep httpd
+      2. Generate custom policy:
+         sudo grep httpd /var/log/audit/audit.log | audit2allow -M mysquirrel
+         sudo semodule -i mysquirrel.pp
+      3. Required permissions:
+         - httpd_can_network_connect
+         - httpd_rw_content_t
+    dest: /usr/local/share/squirrelmail/TROUBLESHOOTING.md
+    mode: 0644

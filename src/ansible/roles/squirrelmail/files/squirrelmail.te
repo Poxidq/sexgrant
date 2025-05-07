@@ -1,0 +1,21 @@
+module squirrelmail 1.0;
+
+require {
+    type httpd_t;
+    type httpd_sys_content_t;
+    type httpd_sys_rw_content_t;
+    type port_t;
+    class tcp_socket { name_bind name_connect };
+    class file { read write getattr open };
+    class dir { search getattr };
+}
+
+# Allow SquirrelMail to connect to mail ports
+allow httpd_t port_t:tcp_socket { name_connect name_bind };
+
+# Allow access to SquirrelMail files
+allow httpd_t httpd_sys_content_t:file { read getattr open };
+allow httpd_t httpd_sys_rw_content_t:file { read write getattr open };
+
+# Allow access to configuration directory
+allow httpd_t httpd_sys_content_t:dir { search getattr }; 

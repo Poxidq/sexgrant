@@ -23,6 +23,7 @@
     - restricted_user
     - log_analysis
     - exploit_demo
+    # - squirrelmail
 
   post_tasks:
     - name: Verify service contexts

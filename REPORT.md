@@ -17,8 +17,6 @@ cd selinux/src
 vagrant up
 ```
 
-{vagrant_up_output}
-
 ## 2. SELinux Configuration Verification
 
 ### 2.1 Initial State
@@ -30,8 +28,6 @@ vagrant ssh
 sestatus
 ```
 
-{selinux_status}
-
 **Explanation:**
 - `enforcing` mode means SELinux is actively enforcing security policies
 - `targeted` policy focuses on protecting network daemons
@@ -42,8 +38,6 @@ sestatus
 # View process contexts
 ps auxZ | grep nginx
 ```
-
-{process_contexts}
 
 **Context Components:**
 1. **User**: Identifies the SELinux user (system_u)
@@ -59,14 +53,10 @@ ps auxZ | grep nginx
 curl "http://localhost:8080/?cmd=id"
 ```
 
-{web_exploit_output}
-
 ```bash
 # Attempt to read sensitive file
 curl "http://localhost:8080/?cmd=cat+/etc/shadow"
 ```
-
-{selinux_denial}
 
 **SELinux Prevention:**
 - Process running as `httpd_t` domain
@@ -82,7 +72,6 @@ curl "http://localhost:8080/?cmd=find+/+-perm+-4000+2>/dev/null"
 curl "http://localhost:8080/?cmd=/usr/local/bin/suid_demo"
 ```
 
-{privesc_attempt}
 
 ## 4. Security Monitoring
 
@@ -92,7 +81,6 @@ curl "http://localhost:8080/?cmd=/usr/local/bin/suid_demo"
 sudo tail -f /var/log/audit/audit.log | grep AVC
 ```
 
-{audit_log_output}
 
 **Understanding AVC Messages:**
 ```
@@ -111,7 +99,6 @@ cd /home/vagrant
 ./generate_report.sh
 ```
 
-{security_report}
 
 ### 4.3 Alert Analysis
 ```bash
@@ -119,7 +106,6 @@ cd /home/vagrant
 sudo sealert -a /var/log/audit/audit.log
 ```
 
-{selinux_alerts}
 
 ## 5. SELinux Policy Analysis
 
@@ -129,7 +115,6 @@ sudo sealert -a /var/log/audit/audit.log
 getsebool -a | grep httpd
 ```
 
-{boolean_settings}
 
 **Key Booleans:**
 - `httpd_execmem`: Controls if web server can execute memory
@@ -140,8 +125,6 @@ getsebool -a | grep httpd
 # Analyze denials
 sudo audit2why < /var/log/audit/audit.log
 ```
-
-{policy_analysis}
 
 ### 5.3 Custom Container Policy
 ```bash
@@ -159,7 +142,6 @@ cat /tmp/custom_container.cil
 ls -Z /var/www/vuln_app/
 ```
 
-{file_contexts}
 
 ### 6.2 Process Domain Transitions
 ```bash
@@ -168,7 +150,6 @@ ps -eZ | grep nginx
 ps -eZ | grep php-fpm
 ```
 
-{process_transitions}
 
 ## 7. Lab Cleanup
 ```bash
